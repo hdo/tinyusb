@@ -107,8 +107,12 @@ if (EXISTS ${PICO_TINYUSB_PATH}/${TINYUSB_TEST_PATH})
     target_link_libraries(mytinyusb_host INTERFACE mytinyusb_common)
 
     add_library(mytinyusb_board INTERFACE)
+    target_include_directories(mytinyusb_board INTERFACE
+            ${PICO_TINYUSB_PATH}/hw/bsp/rp2040/boards/raspberry_pi_pico
+    )
     target_sources(mytinyusb_board INTERFACE
-            ${PICO_TINYUSB_PATH}/hw/bsp/raspberry_pi_pico/board_raspberry_pi_pico.c
+            #${PICO_TINYUSB_PATH}/hw/bsp/raspberry_pi_pico/board_raspberry_pi_pico.c
+            ${PICO_TINYUSB_PATH}/hw/bsp/rp2040/family.c
     )
 
 endif()
