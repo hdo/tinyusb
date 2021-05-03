@@ -133,6 +133,25 @@ tusb_error_t tuh_hid_mouse_get_report(uint8_t dev_addr, void * report)
 //--------------------------------------------------------------------+
 #if CFG_TUSB_HOST_HID_GENERIC
 
+static hidh_interface_t generic_hid_data[CFG_TUSB_HOST_DEVICE_MAX]; // does not have addr0, index = dev_address-1
+
+//------------- GENERIC HID PUBLIC API (parameter validation required) -------------//
+bool  tuh_hid_generic_hid_is_mounted(uint8_t dev_addr)
+{
+  return tuh_device_is_configured(dev_addr) && (generic_hid_data[dev_addr-1].ep_in != 0);
+}
+
+bool tuh_hid_generic_hid_is_busy(uint8_t dev_addr)
+{
+  return  tuh_hid_generic_hid_is_mounted(dev_addr) && hcd_edpt_busy(dev_addr, generic_hid_data[dev_addr-1].ep_in);
+}
+
+tusb_error_t tuh_hid_generic_hid_get_report(uint8_t dev_addr, void* p_report)
+{
+  return hidh_interface_get_report(dev_addr, p_report, &generic_hid_data[dev_addr-1]);
+}
+
+
 //STATIC_ struct {
 //  hidh_interface_info_t
 //} generic_data[CFG_TUSB_HOST_DEVICE_MAX];
@@ -153,7 +172,8 @@ void hidh_init(void)
 #endif
 
 #if CFG_TUSB_HOST_HID_GENERIC
-  hidh_generic_init();
+  tu_memclr(&generic_hid_data, sizeof(hidh_interface_t)*CFG_TUSB_HOST_DEVICE_MAX);
+   // hidh_generic_init();
 #endif
 }
 
@@ -199,8 +219,8 @@ bool hidh_open_subtask(uint8_t rhport, uint8_t dev_addr, tusb_desc_interface_t c
     }
   }else
   {
-    // Not supported subclass
-    return false;
+      TU_ASSERT ( hidh_interface_open(rhport, dev_addr, p_interface_desc->bInterfaceNumber, p_endpoint_desc, &generic_hid_data[dev_addr-1]) );
+      TU_LOG2_HEX(generic_hid_data[dev_addr-1].ep_in);    
   }
 
   *p_length = sizeof(tusb_desc_interface_t) + sizeof(tusb_hid_descriptor_hid_t) + sizeof(tusb_desc_endpoint_t);
@@ -261,6 +281,14 @@ bool hidh_set_config(uint8_t dev_addr, uint8_t itf_num)
   }
 #endif
 
+#if CFG_TUSB_HOST_HID_GENERIC
+  if (( generic_hid_data[dev_addr-1].itf_num == itf_num) && generic_hid_data[dev_addr-1].valid)
+  {
+    tuh_hid_generic_hid_mounted_cb(dev_addr);
+  }
+#endif
+
+
   return true;
 }
 
@@ -285,6 +313,11 @@ bool hidh_xfer_cb(uint8_t dev_addr, uint8_t ep_addr, xfer_result_t event, uint32
 #endif
 
 #if CFG_TUSB_HOST_HID_GENERIC
+  if ( ep_addr == generic_hid_data[dev_addr-1].ep_in )
+  {
+    tuh_hid_generic_hid_isr(dev_addr, event);
+    return true;
+  }
 
 #endif
 
@@ -310,7 +343,12 @@ void hidh_close(uint8_t dev_addr)
 #endif
 
 #if CFG_TUSB_HOST_HID_GENERIC
-  hidh_generic_close(dev_addr);
+  if( generic_hid_data[dev_addr-1].ep_in != 0 )
+  {
+    hidh_interface_close(&generic_hid_data[dev_addr-1]);
+    tuh_hid_generic_hid_unmounted_cb( dev_addr );
+  }
+   //hidh_generic_close(dev_addr);
 #endif
 }
 

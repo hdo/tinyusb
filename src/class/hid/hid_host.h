@@ -186,6 +186,14 @@ tusb_error_t  tuh_hid_generic_set_report(uint8_t dev_addr, void* p_report, bool 
 tusb_interface_status_t tuh_hid_generic_get_status(uint8_t dev_addr);
 tusb_interface_status_t tuh_hid_generic_set_status(uint8_t dev_addr);
 
+
+bool          tuh_hid_generic_hid_is_mounted(uint8_t dev_addr);
+bool          tuh_hid_generic_hid_is_busy(uint8_t dev_addr);
+tusb_error_t  tuh_hid_generic_hid_get_report(uint8_t dev_addr, void* p_report);
+void tuh_hid_generic_hid_isr(uint8_t dev_addr, xfer_result_t event);
+void tuh_hid_generic_hid_mounted_cb(uint8_t dev_addr);
+void tuh_hid_generic_hid_unmounted_cb(uint8_t dev_addr);
+
 //------------- Application Callback -------------//
 void tuh_hid_generic_isr(uint8_t dev_addr, xfer_result_t event);
 
